@@ -32,128 +32,6 @@ void AMQTT_Manager_Paho_Async::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-#pragma region CALLBACKS
-
-void AMQTT_Manager_Paho_Async::DeliveryCompleted(void* CallbackContext, MQTTAsync_token DeliveredToken)
-{
-	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
-
-	if (!Owner)
-	{
-		return;
-	}
-
-	Owner->Delegate_Delivered.Broadcast(FString::FromInt(DeliveredToken));
-}
-
-int AMQTT_Manager_Paho_Async::MessageArrived(void* CallbackContext, char* TopicName, int TopicLenght, MQTTAsync_message* Message)
-{
-	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
-
-	if (!Owner)
-	{
-		return 0;
-	}
-
-	FPahoArrived_Async StrArrived;
-	StrArrived.TopicName = UTF8_TO_TCHAR(TopicName);
-	StrArrived.TopicLenght = TopicLenght;
-	StrArrived.Message.AppendChars(UTF8_TO_TCHAR((char*)Message->payload), Message->payloadlen);
-
-	Owner->Delegate_Arrived.Broadcast(StrArrived);
-
-	MQTTAsync_freeMessage(&Message);
-	MQTTAsync_free(TopicName);
-
-	return 1;
-}
-
-void AMQTT_Manager_Paho_Async::ConnectionLost(void* CallbackContext, char* Cause)
-{
-	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
-
-	if (!Owner)
-	{
-		return;
-	}
-
-	const FString CauseString = UTF8_TO_TCHAR(Cause);
-	Owner->Delegate_Lost.Broadcast(CauseString);
-}
-
-bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoClientParams_Async In_Params)
-{
-	if (In_Params.Address.IsEmpty())
-	{
-		return false;
-	}
-
-	if (In_Protocol.IsEmpty())
-	{
-		return false;
-	}
-
-	if (In_Protocol == "wss" || In_Protocol == "mqtts" || In_Protocol == "ssl" || In_Protocol == "WSS" || In_Protocol == "MQTTS" || In_Protocol == "SSL")
-	{
-		this->SSL_Options = MQTTAsync_SSLOptions_initializer;
-		this->SSL_Options.enableServerCertAuth = 0;
-		this->SSL_Options.verify = 1;
-
-		if (!In_Params.CAPath.IsEmpty() && FPaths::FileExists(In_Params.CAPath))
-		{
-			this->SSL_Options.CApath = TCHAR_TO_UTF8(*In_Params.CAPath);
-		}
-
-		else
-		{
-			this->SSL_Options.CApath = NULL;
-		}
-
-		if (!In_Params.Path_KeyStore.IsEmpty() && FPaths::FileExists(In_Params.Path_KeyStore))
-		{
-			this->SSL_Options.keyStore = TCHAR_TO_UTF8(*In_Params.Path_KeyStore);
-		}
-
-		else
-		{
-			this->SSL_Options.keyStore = NULL;
-		}
-
-		if (!In_Params.Path_TrustStore.IsEmpty() && FPaths::FileExists(In_Params.Path_TrustStore))
-		{
-			this->SSL_Options.trustStore = TCHAR_TO_UTF8(*In_Params.Path_TrustStore);
-		}
-
-		else
-		{
-			this->SSL_Options.trustStore = NULL;
-		}
-
-		if (!In_Params.Path_PrivateKey.IsEmpty() && FPaths::FileExists(In_Params.Path_PrivateKey))
-		{
-
-			this->SSL_Options.privateKey = TCHAR_TO_UTF8(*In_Params.Path_PrivateKey);
-		}
-
-		else
-		{
-			this->SSL_Options.privateKey = NULL;
-		}
-
-		this->SSL_Options.privateKeyPassword = In_Params.PrivateKeyPass.IsEmpty() ? NULL : TCHAR_TO_UTF8(*In_Params.PrivateKeyPass);
-		this->SSL_Options.enabledCipherSuites = In_Params.CipherSuites.IsEmpty() ? NULL : TCHAR_TO_UTF8(*In_Params.CipherSuites);
-
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
-}
-
-#pragma endregion CALLBACKS
-
 FPahoClientParams_Async AMQTT_Manager_Paho_Async::GetClientParams()
 {
 	return this->Client_Params;
@@ -252,10 +130,16 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 			this->Connection_Options.MQTTVersion = (int32)In_Params.Version;
 			this->Connection_Options.ssl = &this->SSL_Options;
 			this->Connection_Options.context = this;
+			this->Connection_Options.onSuccess = onConnect;
+			this->Connection_Options.onSuccess5 = onConnect;
+			this->Connection_Options.onFailure = onConnectFailure;
+			this->Connection_Options.onFailure5 = onConnectFailure;
 
-			if (RetVal != MQTTCLIENT_SUCCESS)
+			if (RetVal != MQTTASYNC_SUCCESS)
 			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while creating client. Code : " + (FString)FString::FromInt(RetVal));
+				TempCode.JsonObject->SetStringField("Description", "There was a problem while creating client.");
+				TempCode.JsonObject->SetNumberField("ErrorCode", RetVal);
+
 				MQTTAsync_destroy(&TempClient);
 
 				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
@@ -269,9 +153,11 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 
 			RetVal = MQTTAsync_setCallbacks(TempClient, this, AMQTT_Manager_Paho_Async::ConnectionLost, AMQTT_Manager_Paho_Async::MessageArrived, AMQTT_Manager_Paho_Async::DeliveryCompleted);
 
-			if (RetVal != MQTTCLIENT_SUCCESS)
+			if (RetVal != MQTTASYNC_SUCCESS)
 			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while setting callbacks. Code : " + (FString)FString::FromInt(RetVal));
+				TempCode.JsonObject->SetStringField("Description", "There was a problem while setting callbacks.");
+				TempCode.JsonObject->SetNumberField("ErrorCode", RetVal);
+
 				MQTTAsync_destroy(&TempClient);
 
 				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
@@ -285,9 +171,11 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 
 			RetVal = MQTTAsync_connect(TempClient, &this->Connection_Options);
 
-			if (RetVal != MQTTCLIENT_SUCCESS)
+			if (RetVal != MQTTASYNC_SUCCESS)
 			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while making connection. Code : " + (FString)FString::FromInt(RetVal));
+				TempCode.JsonObject->SetStringField("Description", "There was a problem while making connection.");
+				TempCode.JsonObject->SetNumberField("ErrorCode", RetVal);
+				
 				MQTTAsync_destroy(&TempClient);
 
 				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
@@ -330,7 +218,6 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, 
 		return false;
 	}
 
-	MQTTClient_deliveryToken DeliveryToken = 0;
 	const int32 QoS = FMath::Clamp((int32)In_QoS, 0, 2);
 	
 	MQTTAsync_message PublishedMessage = MQTTAsync_message_initializer;
@@ -338,20 +225,21 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, 
 	PublishedMessage.payloadlen = In_Payload.Len();
 	PublishedMessage.qos = QoS;
 	PublishedMessage.retained = In_Retained;
-
+	
 	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
 	ResponseOptions.context = this;
-	ResponseOptions.onSuccess = NULL;
-	ResponseOptions.onSuccess5 = NULL;
-	ResponseOptions.onFailure = NULL;
-	ResponseOptions.onFailure5 = NULL;
+	ResponseOptions.onSuccess = onSend;
+	ResponseOptions.onSuccess5 = onSend;
+	ResponseOptions.onFailure = onSendFailure;
+	ResponseOptions.onFailure5 = onSendFailure;
 	
 	const int RetVal = MQTTAsync_sendMessage(this->Client, TCHAR_TO_UTF8(*In_Topic), &PublishedMessage, &ResponseOptions);
 	
-	const FString DescSring = RetVal == MQTTCLIENT_SUCCESS ? "Payload successfully published." : "There was a problem while publishing payload with these configurations. : " + FString::FromInt(RetVal);
+	const FString DescSring = RetVal == MQTTASYNC_SUCCESS ? "Payload successfully published." : "There was a problem while publishing payload with these configurations.";
+	Out_Code.JsonObject->SetNumberField("ErrorCode", RetVal);
 	Out_Code.JsonObject->SetStringField("Description", DescSring);
 
-	return RetVal == MQTTCLIENT_SUCCESS ? true : false;
+	return RetVal == MQTTASYNC_SUCCESS ? true : false;
 }
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS)
