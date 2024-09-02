@@ -34,6 +34,18 @@ void AMQTT_Manager_Paho_Async::Tick(float DeltaTime)
 
 #pragma region CALLBACKS
 
+void AMQTT_Manager_Paho_Async::DeliveryCompleted(void* CallbackContext, MQTTAsync_token DeliveredToken)
+{
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!Owner)
+	{
+		return;
+	}
+
+	Owner->Delegate_Delivered.Broadcast(FString::FromInt(DeliveredToken));
+}
+
 int AMQTT_Manager_Paho_Async::MessageArrived(void* CallbackContext, char* TopicName, int TopicLenght, MQTTAsync_message* Message)
 {
 	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
@@ -153,19 +165,11 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 	{
 		return;
 	}
-
+	
 	if (MQTTAsync_isConnected(this->Client))
 	{
-		if (this->Connection_Options.MQTTVersion == MQTTVERSION_5)
-		{
-			//MQTTClient_disconnect5(this->Client, 10000, MQTTREASONCODE_NORMAL_DISCONNECTION, NULL);
-		}
-
-		else
-		{
-			MQTTAsync_disconnectOptions DisconnectOptions = MQTTAsync_disconnectOptions_initializer;
-			MQTTAsync_disconnect(this->Client, &DisconnectOptions);
-		}
+		MQTTAsync_disconnectOptions DisconnectOptions = MQTTAsync_disconnectOptions_initializer;
+		MQTTAsync_disconnect(this->Client, &DisconnectOptions);
 	}
 
 	MQTTAsync_destroy(&this->Client);
@@ -210,6 +214,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 			{
 				MQTTAsync_createOptions createOpts = MQTTAsync_createOptions_initializer;
 				createOpts.MQTTVersion = MQTTVERSION_5;
+				
 				RetVal = MQTTAsync_createWithOptions(&TempClient, TCHAR_TO_UTF8(*In_Params.Address), TCHAR_TO_UTF8(*In_Params.ClientId), MQTTCLIENT_PERSISTENCE_NONE, NULL, &createOpts);
 
 				if (Protocol == "wss" || Protocol == "ws")
@@ -238,15 +243,15 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 				{
 					this->Connection_Options = MQTTAsync_connectOptions_initializer;
 				}
-
-				this->Connection_Options.cleansession = 1;
 			}
 
+			this->Connection_Options.cleansession = 1;
 			this->Connection_Options.keepAliveInterval = In_Params.KeepAliveInterval;
 			this->Connection_Options.username = TCHAR_TO_UTF8(*In_Params.UserName);
 			this->Connection_Options.password = TCHAR_TO_UTF8(*In_Params.Password);
 			this->Connection_Options.MQTTVersion = (int32)In_Params.Version;
 			this->Connection_Options.ssl = &this->SSL_Options;
+			this->Connection_Options.context = this;
 
 			if (RetVal != MQTTCLIENT_SUCCESS)
 			{
@@ -262,7 +267,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 				return;
 			}
 
-			RetVal = MQTTAsync_setCallbacks(TempClient, this, AMQTT_Manager_Paho_Async::ConnectionLost, AMQTT_Manager_Paho_Async::MessageArrived, NULL);
+			RetVal = MQTTAsync_setCallbacks(TempClient, this, AMQTT_Manager_Paho_Async::ConnectionLost, AMQTT_Manager_Paho_Async::MessageArrived, AMQTT_Manager_Paho_Async::DeliveryCompleted);
 
 			if (RetVal != MQTTCLIENT_SUCCESS)
 			{
@@ -309,7 +314,44 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async D
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS_Async In_QoS, int32 In_Retained)
 {
-	return false;
+	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
+	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Publish");
+	Out_Code.JsonObject->SetStringField("AdditionalInfo", "");
+
+	if (!this->Client)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not valid.");
+		return false;
+	}
+
+	if (!MQTTAsync_isConnected(this->Client))
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not connected.");
+		return false;
+	}
+
+	MQTTClient_deliveryToken DeliveryToken = 0;
+	const int32 QoS = FMath::Clamp((int32)In_QoS, 0, 2);
+	
+	MQTTAsync_message PublishedMessage = MQTTAsync_message_initializer;
+	PublishedMessage.payload = TCHAR_TO_UTF8(*In_Topic);
+	PublishedMessage.payloadlen = In_Payload.Len();
+	PublishedMessage.qos = QoS;
+	PublishedMessage.retained = In_Retained;
+
+	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
+	ResponseOptions.context = this;
+	ResponseOptions.onSuccess = NULL;
+	ResponseOptions.onSuccess5 = NULL;
+	ResponseOptions.onFailure = NULL;
+	ResponseOptions.onFailure5 = NULL;
+	
+	const int RetVal = MQTTAsync_sendMessage(this->Client, TCHAR_TO_UTF8(*In_Topic), &PublishedMessage, &ResponseOptions);
+	
+	const FString DescSring = RetVal == MQTTCLIENT_SUCCESS ? "Payload successfully published." : "There was a problem while publishing payload with these configurations. : " + FString::FromInt(RetVal);
+	Out_Code.JsonObject->SetStringField("Description", DescSring);
+
+	return RetVal == MQTTCLIENT_SUCCESS ? true : false;
 }
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS)

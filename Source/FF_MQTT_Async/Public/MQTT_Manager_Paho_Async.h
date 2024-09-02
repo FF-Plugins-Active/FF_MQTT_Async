@@ -23,6 +23,7 @@ private:
 	FPahoClientParams_Async Client_Params;
 
 #pragma region CALLBACKS
+	static void DeliveryCompleted(void* CallbackContext, MQTTAsync_token DeliveredToken);
 	static int MessageArrived(void* CallbackContext, char* TopicName, int TopicLenght, MQTTAsync_message* Message);
 	static void ConnectionLost(void* CallbackContext, char* Cause);
 	virtual bool SetSSLParams(FString In_Protocol, FPahoClientParams_Async In_Params);

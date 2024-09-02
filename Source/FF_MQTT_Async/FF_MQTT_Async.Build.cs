@@ -20,9 +20,6 @@ public class FF_MQTT_Async : ModuleRules
 			// C Library
             PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "ThirdParty", "paho_c", "Win64", "include"));
 
-            // Asynchronous
-            //PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty", "paho_c", "Win64", "lib", "paho-mqtt3a-static.lib"));
-
             // Asynchronous with SSL
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty", "paho_c", "Win64", "lib", "paho-mqtt3as-static.lib"));
         }
