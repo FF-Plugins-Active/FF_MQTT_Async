@@ -17,7 +17,7 @@ class FF_MQTT_ASYNC_API AMQTT_Manager_Paho_Async : public AActor
 	
 private:	
 
-	MQTTAsync Client = nullptr;
+	MQTTAsync Client;
 	MQTTAsync_connectOptions Connection_Options;
 	MQTTAsync_SSLOptions SSL_Options;
 	FPahoClientParams_Async Client_Params;
@@ -33,12 +33,12 @@ private:
 	static void onSend(void* CallbackContext, MQTTAsync_successData* Response);
 	static void onSendFailure(void* CallbackContext, MQTTAsync_failureData* Response);
 
-	static void onConnect(void* CallbackContext, MQTTAsync_successData5* Response);
-	static void onConnectFailure(void* CallbackContext, MQTTAsync_failureData5* Response);
-	static void OnDisconnect(void* CallbackContext, MQTTAsync_successData5* Response);
-	static void OnDisconnectFailure(void* CallbackContext, MQTTAsync_failureData5* Response);
-	static void onSend(void* CallbackContext, MQTTAsync_successData5* Response);
-	static void onSendFailure(void* CallbackContext, MQTTAsync_failureData5* Response);
+	static void onConnect5(void* CallbackContext, MQTTAsync_successData5* Response);
+	static void onConnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
+	static void OnDisconnect5(void* CallbackContext, MQTTAsync_successData5* Response);
+	static void OnDisconnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
+	static void onSend5(void* CallbackContext, MQTTAsync_successData5* Response);
+	static void onSendFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
 
 	static void DeliveryCompleted(void* CallbackContext, MQTTAsync_token DeliveredToken);
 	static int MessageArrived(void* CallbackContext, char* TopicName, int TopicLenght, MQTTAsync_message* Message);
