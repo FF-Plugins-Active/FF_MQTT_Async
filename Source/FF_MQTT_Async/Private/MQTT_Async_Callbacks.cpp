@@ -2,11 +2,6 @@
 
 bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoClientParams_Async In_Params)
 {
-	if (In_Params.Address.IsEmpty())
-	{
-		return false;
-	}
-
 	if (In_Protocol.IsEmpty())
 	{
 		return false;
@@ -122,93 +117,169 @@ void AMQTT_Manager_Paho_Async::ConnectionLost(void* CallbackContext, char* Cause
 #pragma endregion MAINCALLBACKS
 
 #pragma region V3_CALLBACKS
-void AMQTT_Manager_Paho_Async::onConnect(void* CallbackContext, MQTTAsync_successData* Response)
+void AMQTT_Manager_Paho_Async::OnConnect(void* CallbackContext, MQTTAsync_successData* Response)
 {
-	MQTTAsync Client = (MQTTAsync)CallbackContext;
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
-	const char* Payload= "This message sent from UE5";
-	const char* Topic = "ue5_async";
-	MQTTAsync_message PublishedMessage = MQTTAsync_message_initializer;
-	PublishedMessage.payload = (void*)Payload;
-	PublishedMessage.payloadlen = strlen(Payload);
-	PublishedMessage.qos = 0;
-	PublishedMessage.retained = 0;
+	if (!IsValid(Owner))
+	{
+		return;
+	}
 
-	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
-	//ResponseOptions.context = this;
-	ResponseOptions.onSuccess = onSend;
-	ResponseOptions.onFailure = onSendFailure;
-
-	const int RetVal = MQTTAsync_sendMessage(Client, Topic, &PublishedMessage, &ResponseOptions);
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnConnect.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onConnectFailure(void* CallbackContext, MQTTAsync_failureData* Response)
+void AMQTT_Manager_Paho_Async::OnConnectFailure(void* CallbackContext, MQTTAsync_failureData* Response)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMQTT_Manager_Paho_Async::onConnectFailure"));
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnConnectFailure.Broadcast(Out_Result);
 }
 
 void AMQTT_Manager_Paho_Async::OnDisconnect(void* CallbackContext, MQTTAsync_successData* Response)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMQTT_Manager_Paho_Async::OnDisconnect"));
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	MQTTAsync_destroy(&Owner->Client);
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnDisconnect.Broadcast(Out_Result);
 }
 
 void AMQTT_Manager_Paho_Async::OnDisconnectFailure(void* CallbackContext, MQTTAsync_failureData* Response)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMQTT_Manager_Paho_Async::OnDisconnectFailure"));
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	MQTTAsync_destroy(&Owner->Client);
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnDisconnectFailure.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onSend(void* CallbackContext, MQTTAsync_successData* Response)
+void AMQTT_Manager_Paho_Async::OnSend(void* CallbackContext, MQTTAsync_successData* Response)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMQTT_Manager_Paho_Async::onSend"));
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnSend.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onSendFailure(void* CallbackContext, MQTTAsync_failureData* Response)
+void AMQTT_Manager_Paho_Async::OnSendFailure(void* CallbackContext, MQTTAsync_failureData* Response)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AMQTT_Manager_Paho_Async::onSendFailure"));
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnSendFailure.Broadcast(Out_Result);
 }
 #pragma endregion V3_CALLBACKS
 
 #pragma region V5_CALLBACKS
-void AMQTT_Manager_Paho_Async::onConnect5(void* CallbackContext, MQTTAsync_successData5* Response)
+void AMQTT_Manager_Paho_Async::OnConnect5(void* CallbackContext, MQTTAsync_successData5* Response)
 {
-	MQTTAsync Client = (MQTTAsync)CallbackContext;
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
-	const char* Payload = "This message sent from UE5";
-	const char* Topic = "ue5_async";
-	MQTTAsync_message PublishedMessage = MQTTAsync_message_initializer;
-	PublishedMessage.payload = (void*)Payload;
-	PublishedMessage.payloadlen = strlen(Payload);
-	PublishedMessage.qos = 0;
-	PublishedMessage.retained = 0;
+	if (!IsValid(Owner))
+	{
+		return;
+	}
 
-	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
-	//ResponseOptions.context = this;
-	ResponseOptions.onSuccess5 = onSend5;
-	ResponseOptions.onFailure5 = onSendFailure5;
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnConnect.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onConnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
+void AMQTT_Manager_Paho_Async::OnConnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
 {
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnConnectFailure.Broadcast(Out_Result);
 }
 
 void AMQTT_Manager_Paho_Async::OnDisconnect5(void* CallbackContext, MQTTAsync_successData5* Response)
 {
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	MQTTAsync_destroy(&Owner->Client);
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnDisconnect.Broadcast(Out_Result);
 }
 
 void AMQTT_Manager_Paho_Async::OnDisconnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
 {
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	MQTTAsync_destroy(&Owner->Client);
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnDisconnectFailure.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onSend5(void* CallbackContext, MQTTAsync_successData5* Response)
+void AMQTT_Manager_Paho_Async::OnSend5(void* CallbackContext, MQTTAsync_successData5* Response)
 {
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnSend.Broadcast(Out_Result);
 }
 
-void AMQTT_Manager_Paho_Async::onSendFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
+void AMQTT_Manager_Paho_Async::OnSendFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
 {
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
 
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+	Owner->Delegate_OnSendFailure.Broadcast(Out_Result);
 }
 #pragma endregion V5_CALLBACKS

@@ -109,18 +109,35 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	EMQTTVERSION_Async Version = EMQTTVERSION_Async::Default;
 
-	bool IsParamsValid()
+	bool IsParamsValid(FString& Out_Code)
 	{
-		if (this->ClientId.IsEmpty() || this->Address.IsEmpty())
+		if (Address.IsEmpty())
 		{
+			Out_Code = "Address is empty.";
 			return false;
 		}
 
-		else
+		if (this->ClientId.IsEmpty())
 		{
-			return true;
+			Out_Code = "ClientId is empty.";
+			return false;
 		}
+
+		Out_Code = "Parameters is valid.";
+		return true;
 	};
+
+	FString GetProtocol()
+	{
+		TArray<FString> URL_Sections = UKismetStringLibrary::ParseIntoArray(Address, "://");
+
+		if (URL_Sections.Num() <= 1)
+		{
+			return "";
+		}
+
+		return URL_Sections[0];
+	}
 
 	bool operator == (const FPahoClientParams_Async& Other) const
 	{
@@ -168,9 +185,12 @@ FORCEINLINE uint32 GetTypeHash(const FPahoClientParams_Async& Key)
 	return GenericHash;
 }
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Delivered_Async, FString, Out_Result);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Arrived_Async, FPahoArrived_Async, Out_Result);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Lost_Async, FString, Out_Cause);
-
-UDELEGATE(BlueprintAuthorityOnly)
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FDelegate_Paho_Connection_Async, bool, bIsSuccessfull, FJsonObjectWrapper, Out_Code);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_Delivered, FString, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_Arrived, FPahoArrived_Async, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_Lost, FString, Out_Cause);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnConnect, FJsonObjectWrapper, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnConnectFailure, FJsonObjectWrapper, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnDisconnect, FJsonObjectWrapper, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnDisconnectFailure, FJsonObjectWrapper, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnSend, FJsonObjectWrapper, Out_Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDelegate_Paho_Async_OnSendFailure, FJsonObjectWrapper, Out_Result);

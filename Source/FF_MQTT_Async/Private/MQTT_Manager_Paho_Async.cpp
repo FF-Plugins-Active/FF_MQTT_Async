@@ -18,11 +18,7 @@ void AMQTT_Manager_Paho_Async::BeginPlay()
 // Called when the game end or when destroyed.
 void AMQTT_Manager_Paho_Async::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (this->Client)
-	{
-		this->MQTT_Async_Destroy();
-	}
-
+	//this->MQTT_Async_Destroy();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -44,166 +40,208 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 		return;
 	}
 	
-	if (MQTTAsync_isConnected(this->Client))
+	if (!MQTTAsync_isConnected(this->Client))
 	{
-		MQTTAsync_disconnectOptions DisconnectOptions = MQTTAsync_disconnectOptions_initializer;
-		MQTTAsync_disconnect(&this->Client, &DisconnectOptions);
+		return;
 	}
 
-	MQTTAsync_destroy(&this->Client);
+	MQTTAsync_disconnectOptions Disconnect_Options = MQTTAsync_disconnectOptions_initializer;
+	Disconnect_Options.context = this;
+	Disconnect_Options.reasonCode = MQTTREASONCODE_DISCONNECT_WITH_WILL_MESSAGE;
+	Disconnect_Options.timeout = 10000;
+
+	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	{
+		Disconnect_Options.onSuccess5 = OnDisconnect5;
+		Disconnect_Options.onFailure5 = OnDisconnectFailure5;
+	}
+
+	else
+	{
+		Disconnect_Options.onSuccess = OnDisconnect;
+		Disconnect_Options.onFailure = OnDisconnectFailure;
+	}
+
+	MQTTAsync_disconnect(&this->Client, &Disconnect_Options);
 }
 
-void AMQTT_Manager_Paho_Async::MQTT_Async_Init(FDelegate_Paho_Connection_Async DelegateConnection, FPahoClientParams_Async In_Params)
+bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams_Async In_Params)
 {
-	FJsonObjectWrapper TempCode;
-	TempCode.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
-	TempCode.JsonObject->SetStringField("FunctionName", "MQTT_Async_Init");
-	TempCode.JsonObject->SetStringField("AdditionalInfo", "");
+	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
+	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Init");
+	Out_Code.JsonObject->SetStringField("AdditionalInfo", "");
+	Out_Code.JsonObject->SetStringField("ErrorCode", "");
 
 	if (this->Client)
 	{
-		TempCode.JsonObject->SetStringField("Description", "Client already initialized.");
-		DelegateConnection.ExecuteIfBound(false, TempCode);
-		return;
+		Out_Code.JsonObject->SetStringField("Description", "Client already initialized.");
+		return false;
 	}
 
-	if (!In_Params.IsParamsValid())
+	if (MQTTAsync_isConnected(this->Client))
 	{
-		TempCode.JsonObject->SetStringField("Description", "Address and/or client id should not be empty.");
-		DelegateConnection.ExecuteIfBound(false, TempCode);
-		return;
+		Out_Code.JsonObject->SetStringField("Description", "Client already connected.");
+		return false;
 	}
 
-	AsyncTask(ENamedThreads::AnyNormalThreadNormalTask, [this, DelegateConnection, TempCode, In_Params]()
+	FString ParameterReason;
+	if (!In_Params.IsParamsValid(ParameterReason))
+	{
+		Out_Code.JsonObject->SetStringField("Description", ParameterReason);
+		return false;
+	}
+
+	FString Protocol = In_Params.GetProtocol();
+	
+	if (this->SetSSLParams(Protocol, In_Params))
+	{
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters set.");
+	}
+
+	else
+	{
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters couldn't set.");
+	}
+
+	MQTTAsync Temp_Client = nullptr;
+	int RetVal = -1;
+
+	if (In_Params.Version == EMQTTVERSION_Async::V_5)
+	{
+		MQTTAsync_createOptions Create_Options = MQTTAsync_createOptions_initializer;
+		Create_Options.MQTTVersion = MQTTVERSION_5;
+
+		RetVal = MQTTAsync_createWithOptions(&Temp_Client, TCHAR_TO_UTF8(*In_Params.Address), TCHAR_TO_UTF8(*In_Params.ClientId), MQTTCLIENT_PERSISTENCE_NONE, NULL, &Create_Options);
+
+		if (Protocol == "wss" || Protocol == "ws")
 		{
-			FString Protocol;
-			TArray<FString> URL_Sections = UKismetStringLibrary::ParseIntoArray(In_Params.Address, "://");
-
-			if (URL_Sections.Num() > 1)
-			{
-				Protocol = URL_Sections[0];
-				this->SetSSLParams(Protocol, In_Params);
-			}
-
-			int RetVal = -1;
-
-			if (In_Params.Version == EMQTTVERSION_Async::V_5)
-			{
-				MQTTAsync_createOptions createOpts = MQTTAsync_createOptions_initializer;
-				createOpts.MQTTVersion = MQTTVERSION_5;
-				
-				RetVal = MQTTAsync_createWithOptions(&this->Client, TCHAR_TO_UTF8(*In_Params.Address), TCHAR_TO_UTF8(*In_Params.ClientId), MQTTCLIENT_PERSISTENCE_NONE, NULL, &createOpts);
-
-				if (Protocol == "wss" || Protocol == "ws")
-				{
-					this->Connection_Options = MQTTAsync_connectOptions_initializer5_ws;
-				}
-
-				else
-				{
-					this->Connection_Options = MQTTAsync_connectOptions_initializer5;
-				}
-
-				this->Connection_Options.cleanstart = 1;
-				this->Connection_Options.onSuccess5 = onConnect5;
-				this->Connection_Options.onFailure5 = onConnectFailure5;
-			}
-
-			else
-			{
-				RetVal = MQTTAsync_create(&this->Client, TCHAR_TO_UTF8(*In_Params.Address), TCHAR_TO_UTF8(*In_Params.ClientId), MQTTCLIENT_PERSISTENCE_NONE, NULL);
-
-				if (Protocol == "wss" || Protocol == "ws")
-				{
-					this->Connection_Options = MQTTAsync_connectOptions_initializer_ws;
-				}
-
-				else
-				{
-					this->Connection_Options = MQTTAsync_connectOptions_initializer;
-				}
-
-				this->Connection_Options.cleansession = 1;
-				this->Connection_Options.onSuccess = onConnect;
-				this->Connection_Options.onFailure = onConnectFailure;
-			}
-
-			this->Connection_Options.keepAliveInterval = In_Params.KeepAliveInterval;
-			this->Connection_Options.username = TCHAR_TO_UTF8(*In_Params.UserName);
-			this->Connection_Options.password = TCHAR_TO_UTF8(*In_Params.Password);
-			this->Connection_Options.MQTTVersion = (int32)In_Params.Version;
-			this->Connection_Options.ssl = &this->SSL_Options;
-			this->Connection_Options.context = this->Client;
-
-			if (RetVal != MQTTASYNC_SUCCESS)
-			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while creating client.");
-				TempCode.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
-
-				MQTTAsync_destroy(&this->Client);
-
-				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
-					{
-						DelegateConnection.ExecuteIfBound(false, TempCode);
-					}
-				);
-
-				return;
-			}
-
-			RetVal = MQTTAsync_setCallbacks(this->Client, this, AMQTT_Manager_Paho_Async::ConnectionLost, AMQTT_Manager_Paho_Async::MessageArrived, AMQTT_Manager_Paho_Async::DeliveryCompleted);
-
-			if (RetVal != MQTTASYNC_SUCCESS)
-			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while setting callbacks.");
-				TempCode.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
-
-				MQTTAsync_destroy(&this->Client);
-
-				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
-					{
-						DelegateConnection.ExecuteIfBound(false, TempCode);
-					}
-				);
-
-				return;
-			}
-
-			RetVal = MQTTAsync_connect(this->Client, &this->Connection_Options);
-
-			if (RetVal != MQTTASYNC_SUCCESS)
-			{
-				TempCode.JsonObject->SetStringField("Description", "There was a problem while making connection.");
-				TempCode.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
-				
-				MQTTAsync_destroy(&this->Client);
-
-				AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
-					{
-						DelegateConnection.ExecuteIfBound(false, TempCode);
-					}
-				);
-
-				return;
-			}
-
-			TempCode.JsonObject->SetStringField("Description", "Connection successful.");
-			TempCode.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
-
-			this->Client_Params = In_Params;
-
-			AsyncTask(ENamedThreads::GameThread, [DelegateConnection, TempCode]()
-				{
-					DelegateConnection.ExecuteIfBound(true, TempCode);
-				}
-			);
+			this->Connection_Options = MQTTAsync_connectOptions_initializer5_ws;
 		}
-	);
+
+		else
+		{
+			this->Connection_Options = MQTTAsync_connectOptions_initializer5;
+		}
+
+		this->Connection_Options.cleanstart = 1;
+		this->Connection_Options.onSuccess5 = OnConnect5;
+		this->Connection_Options.onFailure5 = OnConnectFailure5;
+	}
+
+	else
+	{
+		RetVal = MQTTAsync_create(&Temp_Client, TCHAR_TO_UTF8(*In_Params.Address), TCHAR_TO_UTF8(*In_Params.ClientId), MQTTCLIENT_PERSISTENCE_NONE, NULL);
+
+		if (Protocol == "wss" || Protocol == "ws")
+		{
+			this->Connection_Options = MQTTAsync_connectOptions_initializer_ws;
+		}
+
+		else
+		{
+			this->Connection_Options = MQTTAsync_connectOptions_initializer;
+		}
+
+		this->Connection_Options.cleansession = 1;
+		this->Connection_Options.onSuccess = OnConnect;
+		this->Connection_Options.onFailure = OnConnectFailure;
+	}
+
+	this->Connection_Options.keepAliveInterval = In_Params.KeepAliveInterval;
+	this->Connection_Options.username = TCHAR_TO_UTF8(*In_Params.UserName);
+	this->Connection_Options.password = TCHAR_TO_UTF8(*In_Params.Password);
+	this->Connection_Options.MQTTVersion = (int32)In_Params.Version;
+	this->Connection_Options.ssl = &this->SSL_Options;
+	this->Connection_Options.context = this;
+
+	if (RetVal != MQTTASYNC_SUCCESS)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "There was a problem while creating client.");
+		Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+		MQTTAsync_destroy(&Temp_Client);
+		return false;
+	}
+
+	RetVal = MQTTAsync_setCallbacks(Temp_Client, this, AMQTT_Manager_Paho_Async::ConnectionLost, AMQTT_Manager_Paho_Async::MessageArrived, AMQTT_Manager_Paho_Async::DeliveryCompleted);
+
+	if (RetVal != MQTTASYNC_SUCCESS)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "There was a problem while setting callbacks.");
+		Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+		MQTTAsync_destroy(&Temp_Client);
+		return false;
+	}
+
+	RetVal = MQTTAsync_connect(Temp_Client, &this->Connection_Options);
+
+	if (RetVal != MQTTASYNC_SUCCESS)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "There was a problem while making connection.");
+		Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+		MQTTAsync_destroy(&Temp_Client);
+		return false;
+	}
+
+	Out_Code.JsonObject->SetStringField("Description", "Connection successful.");
+	Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+	this->Client = Temp_Client;
+	this->Client_Params = In_Params;
+
+	return true;
 }
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS_Async In_QoS, int32 In_Retained)
 {
-	return false;
+	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
+	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Publish");
+	Out_Code.JsonObject->SetStringField("AdditionalInfo", "");
+	Out_Code.JsonObject->SetStringField("ErrorCode", "");
+
+	if (!this->Client)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not valid.");
+		return false;
+	}
+
+	if (!MQTTAsync_isConnected(this->Client))
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not connected.");
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "Try to give some delay before using this or use it after \"Delegate OnConnect\"");
+		return false;
+	}
+
+	MQTTAsync_message PublishedMessage = MQTTAsync_message_initializer;
+	PublishedMessage.payload = (void*)TCHAR_TO_UTF8(*In_Payload);
+	PublishedMessage.payloadlen = In_Payload.Len();
+	PublishedMessage.qos = 0;
+	PublishedMessage.retained = 0;
+
+	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
+	ResponseOptions.context = this;
+	
+	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	{
+		ResponseOptions.onSuccess5 = OnSend5;
+		ResponseOptions.onFailure5 = OnSendFailure5;
+	}
+
+	else
+	{
+		ResponseOptions.onSuccess = OnSend;
+		ResponseOptions.onFailure = OnSendFailure;
+	}
+	
+	const int RetVal = MQTTAsync_sendMessage(this->Client, TCHAR_TO_UTF8(*In_Topic), &PublishedMessage, &ResponseOptions);
+
+	const FString Description = RetVal == MQTTASYNC_SUCCESS ? "Message successfully published." : "There was a problem while publishing message.";
+	Out_Code.JsonObject->SetStringField("Description", Description);
+	Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+	
+	return RetVal == MQTTASYNC_SUCCESS ? true : false;
 }
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS)
