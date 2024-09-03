@@ -246,5 +246,44 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, 
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS)
 {
-	return false;
+	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
+	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Subscribe");
+	Out_Code.JsonObject->SetStringField("AdditionalInfo", "");
+	Out_Code.JsonObject->SetStringField("ErrorCode", "");
+
+	if (!this->Client)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not valid.");
+		return false;
+	}
+
+	if (!MQTTAsync_isConnected(this->Client))
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not connected.");
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "Try to give some delay before using this or use it after \"Delegate OnConnect\"");
+		return false;
+	}
+
+	MQTTAsync_responseOptions Response_Options = MQTTAsync_responseOptions_initializer;
+	Response_Options.context = this;
+
+	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	{
+		Response_Options.onSuccess5 = NULL;
+		Response_Options.onFailure5 = NULL;
+	}
+
+	else
+	{
+		Response_Options.onSuccess = NULL;
+		Response_Options.onFailure = NULL;
+	}
+
+	const int RetVal = MQTTAsync_subscribe(this->Client, TCHAR_TO_UTF8(*In_Topic), (int32)In_QoS, & Response_Options);
+
+	const FString Description = RetVal == MQTTASYNC_SUCCESS ? "Target successfully subscribed." : "There was a problem while subscribing target.";
+	Out_Code.JsonObject->SetStringField("Description", Description);
+	Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+	return RetVal == MQTTASYNC_SUCCESS ? true : false;
 }
