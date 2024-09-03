@@ -63,6 +63,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 	}
 
 	MQTTAsync_disconnect(&this->Client, &Disconnect_Options);
+	MQTTAsync_destroy(&this->Client);
 }
 
 bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams_Async In_Params)
@@ -282,6 +283,50 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code
 	const int RetVal = MQTTAsync_subscribe(this->Client, TCHAR_TO_UTF8(*In_Topic), (int32)In_QoS, & Response_Options);
 
 	const FString Description = RetVal == MQTTASYNC_SUCCESS ? "Target successfully subscribed." : "There was a problem while subscribing target.";
+	Out_Code.JsonObject->SetStringField("Description", Description);
+	Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
+
+	return RetVal == MQTTASYNC_SUCCESS ? true : false;
+}
+
+bool AMQTT_Manager_Paho_Async::MQTT_Async_Unsubscribe(FJsonObjectWrapper& Out_Code, FString In_Topic)
+{
+	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
+	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Unsubscribe");
+	Out_Code.JsonObject->SetStringField("AdditionalInfo", "");
+	Out_Code.JsonObject->SetStringField("ErrorCode", "");
+
+	if (!this->Client)
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not valid.");
+		return false;
+	}
+
+	if (!MQTTAsync_isConnected(this->Client))
+	{
+		Out_Code.JsonObject->SetStringField("Description", "Client is not connected.");
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "Try to give some delay before using this or use it after \"Delegate OnConnect\"");
+		return false;
+	}
+
+	MQTTAsync_responseOptions Response_Options = MQTTAsync_responseOptions_initializer;
+	Response_Options.context = this;
+
+	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	{
+		Response_Options.onSuccess5 = OnUnSubscribe5;
+		Response_Options.onFailure5 = OnUnSubscribeFailure5;
+	}
+
+	else
+	{
+		Response_Options.onSuccess = OnUnSubscribe;
+		Response_Options.onFailure = OnUnSubscribeFailure;
+	}
+
+	const int RetVal = MQTTAsync_unsubscribe(this->Client, TCHAR_TO_UTF8(*In_Topic), &Response_Options);
+
+	const FString Description = RetVal == MQTTASYNC_SUCCESS ? "Target successfully unsubscribed." : "There was a problem while unsubscribing target.";
 	Out_Code.JsonObject->SetStringField("Description", Description);
 	Out_Code.JsonObject->SetStringField("ErrorCode", FString::FromInt(RetVal));
 

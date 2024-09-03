@@ -32,6 +32,8 @@ private:
 	static void OnDisconnectFailure(void* CallbackContext, MQTTAsync_failureData* Response);
 	static void OnSend(void* CallbackContext, MQTTAsync_successData* Response);
 	static void OnSendFailure(void* CallbackContext, MQTTAsync_failureData* Response);
+	static void OnUnSubscribe(void* CallbackContext, MQTTAsync_successData* Response);
+	static void OnUnSubscribeFailure(void* CallbackContext, MQTTAsync_failureData* Response);
 
 	static void OnConnect5(void* CallbackContext, MQTTAsync_successData5* Response);
 	static void OnConnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
@@ -39,6 +41,8 @@ private:
 	static void OnDisconnectFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
 	static void OnSend5(void* CallbackContext, MQTTAsync_successData5* Response);
 	static void OnSendFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
+	static void OnUnSubscribe5(void* CallbackContext, MQTTAsync_successData5* Response);
+	static void OnUnSubscribeFailure5(void* CallbackContext, MQTTAsync_failureData5* Response);
 
 	static void DeliveryCompleted(void* CallbackContext, MQTTAsync_token DeliveredToken);
 	static int MessageArrived(void* CallbackContext, char* TopicName, int TopicLenght, MQTTAsync_message* Message);
@@ -103,5 +107,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Subscribe", ToolTip = "Don't use it immediately after \"MQTT Async Init\" give some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, subscribe, subscriber"))
 	virtual bool MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS = EMQTTQOS_Async::QoS_0);
+
+	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Unsubscribe", ToolTip = "Don't use it immediately after \"MQTT Async Init\" give some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, unsubscribe, subscriber"))
+	virtual bool MQTT_Async_Unsubscribe(FJsonObjectWrapper& Out_Code, FString In_Topic);
 
 };

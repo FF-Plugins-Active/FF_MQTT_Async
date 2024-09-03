@@ -127,6 +127,11 @@ void AMQTT_Manager_Paho_Async::OnConnect(void* CallbackContext, MQTTAsync_succes
 	}
 
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("MQTT_Version", FString::FromInt(Response->alt.connect.MQTTVersion));
+	Out_Result.JsonObject->SetStringField("Session_Present", FString::FromInt(Response->alt.connect.sessionPresent));
+	Out_Result.JsonObject->SetStringField("Server_Uri", UTF8_TO_TCHAR(Response->alt.connect.serverURI));
+	
 	Owner->Delegate_OnConnect.Broadcast(Out_Result);
 }
 
@@ -140,6 +145,10 @@ void AMQTT_Manager_Paho_Async::OnConnectFailure(void* CallbackContext, MQTTAsync
 	}
 
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+
 	Owner->Delegate_OnConnectFailure.Broadcast(Out_Result);
 }
 
@@ -152,9 +161,12 @@ void AMQTT_Manager_Paho_Async::OnDisconnect(void* CallbackContext, MQTTAsync_suc
 		return;
 	}
 
-	MQTTAsync_destroy(&Owner->Client);
-
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("MQTT_Version", FString::FromInt(Response->alt.connect.MQTTVersion));
+	Out_Result.JsonObject->SetStringField("Session_Present", FString::FromInt(Response->alt.connect.sessionPresent));
+	Out_Result.JsonObject->SetStringField("Server_Uri", UTF8_TO_TCHAR(Response->alt.connect.serverURI));
+
 	Owner->Delegate_OnDisconnect.Broadcast(Out_Result);
 }
 
@@ -167,9 +179,11 @@ void AMQTT_Manager_Paho_Async::OnDisconnectFailure(void* CallbackContext, MQTTAs
 		return;
 	}
 
-	MQTTAsync_destroy(&Owner->Client);
-
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+
 	Owner->Delegate_OnDisconnectFailure.Broadcast(Out_Result);
 }
 
@@ -182,7 +196,36 @@ void AMQTT_Manager_Paho_Async::OnSend(void* CallbackContext, MQTTAsync_successDa
 		return;
 	}
 
+	const int PayloadLenght = Response->alt.pub.message.payloadlen;
+	void* Payload = Response->alt.pub.message.payload;
+
+	int32 Index = 0;
+	int32 Length = 0x7FFFFFFF;
+
+	if (Index < 0)
+	{
+		Length += Index;
+		Index = 0;
+	}
+
+	if (Length > PayloadLenght - Index)
+	{
+		Length = PayloadLenght - Index;
+	}
+
+	const FUTF8ToTCHAR Src(reinterpret_cast<const ANSICHAR*>((uint8*)Payload + Index), Length);
+	const FString UTF8 = FString(Src.Length(), Src.Get());
+
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Topic", Response->alt.pub.destinationName);
+	Out_Result.JsonObject->SetStringField("Dup_Flag", FString::FromInt(Response->alt.pub.message.dup));
+	Out_Result.JsonObject->SetStringField("Message_Id", FString::FromInt(Response->alt.pub.message.msgid));
+	Out_Result.JsonObject->SetStringField("Payload", UTF8);
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(PayloadLenght));
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(Response->alt.pub.message.qos));
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(Response->alt.pub.message.retained));
+
 	Owner->Delegate_OnSend.Broadcast(Out_Result);
 }
 
@@ -196,7 +239,34 @@ void AMQTT_Manager_Paho_Async::OnSendFailure(void* CallbackContext, MQTTAsync_fa
 	}
 
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+
 	Owner->Delegate_OnSendFailure.Broadcast(Out_Result);
+}
+void AMQTT_Manager_Paho_Async::OnUnSubscribe(void* CallbackContext, MQTTAsync_successData* Response)
+{
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+}
+
+void AMQTT_Manager_Paho_Async::OnUnSubscribeFailure(void* CallbackContext, MQTTAsync_failureData* Response)
+{
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
 }
 #pragma endregion V3_CALLBACKS
 
@@ -211,6 +281,13 @@ void AMQTT_Manager_Paho_Async::OnConnect5(void* CallbackContext, MQTTAsync_succe
 	}
 
 	FJsonObjectWrapper Out_Result;
+	
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("MQTT_Version", FString::FromInt(Response->alt.connect.MQTTVersion));
+	Out_Result.JsonObject->SetStringField("Session_Present", FString::FromInt(Response->alt.connect.sessionPresent));
+	Out_Result.JsonObject->SetStringField("Server_Uri", UTF8_TO_TCHAR(Response->alt.connect.serverURI));
+	Out_Result.JsonObject->SetStringField("Reason_Code", MQTTReasonCode_toString(Response->reasonCode));
+
 	Owner->Delegate_OnConnect.Broadcast(Out_Result);
 }
 
@@ -222,8 +299,14 @@ void AMQTT_Manager_Paho_Async::OnConnectFailure5(void* CallbackContext, MQTTAsyn
 	{
 		return;
 	}
-
+	
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+	Out_Result.JsonObject->SetStringField("Reason_Code", MQTTReasonCode_toString(Response->reasonCode));
+	Out_Result.JsonObject->SetStringField("Packet_Type", FString::FromInt(Response->packet_type));
+
 	Owner->Delegate_OnConnectFailure.Broadcast(Out_Result);
 }
 
@@ -236,9 +319,13 @@ void AMQTT_Manager_Paho_Async::OnDisconnect5(void* CallbackContext, MQTTAsync_su
 		return;
 	}
 
-	MQTTAsync_destroy(&Owner->Client);
-
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("MQTT_Version", FString::FromInt(Response->alt.connect.MQTTVersion));
+	Out_Result.JsonObject->SetStringField("Session_Present", FString::FromInt(Response->alt.connect.sessionPresent));
+	Out_Result.JsonObject->SetStringField("Server_Uri", UTF8_TO_TCHAR(Response->alt.connect.serverURI));
+	Out_Result.JsonObject->SetStringField("Reason_Code", MQTTReasonCode_toString(Response->reasonCode));
+
 	Owner->Delegate_OnDisconnect.Broadcast(Out_Result);
 }
 
@@ -251,9 +338,13 @@ void AMQTT_Manager_Paho_Async::OnDisconnectFailure5(void* CallbackContext, MQTTA
 		return;
 	}
 
-	MQTTAsync_destroy(&Owner->Client);
-
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+	Out_Result.JsonObject->SetStringField("Reason_Code", MQTTReasonCode_toString(Response->reasonCode));
+	Out_Result.JsonObject->SetStringField("Packet_Type", FString::FromInt(Response->packet_type));
+
 	Owner->Delegate_OnDisconnectFailure.Broadcast(Out_Result);
 }
 
@@ -266,7 +357,36 @@ void AMQTT_Manager_Paho_Async::OnSend5(void* CallbackContext, MQTTAsync_successD
 		return;
 	}
 
+	const int PayloadLenght = Response->alt.pub.message.payloadlen;
+	void* Payload = Response->alt.pub.message.payload;
+
+	int32 Index = 0;
+	int32 Length = 0x7FFFFFFF;
+
+	if (Index < 0)
+	{
+		Length += Index;
+		Index = 0;
+	}
+
+	if (Length > PayloadLenght - Index)
+	{
+		Length = PayloadLenght - Index;
+	}
+
+	const FUTF8ToTCHAR Src(reinterpret_cast<const ANSICHAR*>((uint8*)Payload + Index), Length);
+	const FString UTF8 = FString(Src.Length(), Src.Get());
+
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Topic", Response->alt.pub.destinationName);
+	Out_Result.JsonObject->SetStringField("Dup_Flag", FString::FromInt(Response->alt.pub.message.dup));
+	Out_Result.JsonObject->SetStringField("Message_Id", FString::FromInt(Response->alt.pub.message.msgid));
+	Out_Result.JsonObject->SetStringField("Payload", UTF8);
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(PayloadLenght));
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(Response->alt.pub.message.qos));
+	Out_Result.JsonObject->SetStringField("Payload_Lenght", FString::FromInt(Response->alt.pub.message.retained));
+
 	Owner->Delegate_OnSend.Broadcast(Out_Result);
 }
 
@@ -280,6 +400,34 @@ void AMQTT_Manager_Paho_Async::OnSendFailure5(void* CallbackContext, MQTTAsync_f
 	}
 
 	FJsonObjectWrapper Out_Result;
+	Out_Result.JsonObject->SetStringField("Token", FString::FromInt(Response->token));
+	Out_Result.JsonObject->SetStringField("Code", FString::FromInt(Response->code));
+	Out_Result.JsonObject->SetStringField("Message", Response->message);
+	Out_Result.JsonObject->SetStringField("Reason_Code", MQTTReasonCode_toString(Response->reasonCode));
+	Out_Result.JsonObject->SetStringField("Packet_Type", FString::FromInt(Response->packet_type));
+
 	Owner->Delegate_OnSendFailure.Broadcast(Out_Result);
+}
+void AMQTT_Manager_Paho_Async::OnUnSubscribe5(void* CallbackContext, MQTTAsync_successData5* Response)
+{
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
+}
+void AMQTT_Manager_Paho_Async::OnUnSubscribeFailure5(void* CallbackContext, MQTTAsync_failureData5* Response)
+{
+	AMQTT_Manager_Paho_Async* Owner = Cast<AMQTT_Manager_Paho_Async>((AMQTT_Manager_Paho_Async*)CallbackContext);
+
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	FJsonObjectWrapper Out_Result;
 }
 #pragma endregion V5_CALLBACKS
