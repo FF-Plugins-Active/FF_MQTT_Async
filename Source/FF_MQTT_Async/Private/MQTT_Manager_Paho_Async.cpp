@@ -47,13 +47,13 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 
 	MQTTAsync_disconnectOptions Disconnect_Options = MQTTAsync_disconnectOptions_initializer;
 	Disconnect_Options.context = this;
-	Disconnect_Options.reasonCode = MQTTREASONCODE_DISCONNECT_WITH_WILL_MESSAGE;
 	Disconnect_Options.timeout = 10000;
 
 	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
 	{
 		Disconnect_Options.onSuccess5 = OnDisconnect5;
 		Disconnect_Options.onFailure5 = OnDisconnectFailure5;
+		Disconnect_Options.reasonCode = MQTTREASONCODE_DISCONNECT_WITH_WILL_MESSAGE;
 	}
 
 	else
