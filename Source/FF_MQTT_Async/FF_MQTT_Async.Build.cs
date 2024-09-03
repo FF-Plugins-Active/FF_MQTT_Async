@@ -29,7 +29,6 @@ public class FF_MQTT_Async : ModuleRules
 			{
 				"Core",
                 "OpenSSL",
-                "FF_MBedTLS",
             }
 			);
 			

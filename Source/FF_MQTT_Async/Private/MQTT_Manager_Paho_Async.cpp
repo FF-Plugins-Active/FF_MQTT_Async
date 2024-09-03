@@ -40,29 +40,37 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 		return;
 	}
 	
-	if (!MQTTAsync_isConnected(this->Client))
+	if (MQTTAsync_isConnected(this->Client))
 	{
-		return;
+		MQTTAsync_disconnectOptions Disconnect_Options = MQTTAsync_disconnectOptions_initializer;
+		Disconnect_Options.context = this;
+		Disconnect_Options.timeout = 10000;
+
+		if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+		{
+			Disconnect_Options.onSuccess5 = OnDisconnect5;
+			Disconnect_Options.onFailure5 = OnDisconnectFailure5;
+			Disconnect_Options.reasonCode = MQTTREASONCODE_DISCONNECT_WITH_WILL_MESSAGE;
+		}
+
+		else
+		{
+			Disconnect_Options.onSuccess = OnDisconnect;
+			Disconnect_Options.onFailure = OnDisconnectFailure;
+		}
+
+		try
+		{
+			MQTTAsync_disconnect(&this->Client, &Disconnect_Options);
+		}
+
+		catch (const std::exception& Exception)
+		{
+			const FString ExceptionString = Exception.what();
+			UE_LOG(LogTemp, Warning, TEXT("Disconnect exception : %s"), *ExceptionString);
+		}
 	}
 
-	MQTTAsync_disconnectOptions Disconnect_Options = MQTTAsync_disconnectOptions_initializer;
-	Disconnect_Options.context = this;
-	Disconnect_Options.timeout = 10000;
-
-	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
-	{
-		Disconnect_Options.onSuccess5 = OnDisconnect5;
-		Disconnect_Options.onFailure5 = OnDisconnectFailure5;
-		Disconnect_Options.reasonCode = MQTTREASONCODE_DISCONNECT_WITH_WILL_MESSAGE;
-	}
-
-	else
-	{
-		Disconnect_Options.onSuccess = OnDisconnect;
-		Disconnect_Options.onFailure = OnDisconnectFailure;
-	}
-
-	MQTTAsync_disconnect(&this->Client, &Disconnect_Options);
 	MQTTAsync_destroy(&this->Client);
 }
 
