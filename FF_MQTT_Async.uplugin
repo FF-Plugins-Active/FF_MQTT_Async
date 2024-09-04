@@ -27,11 +27,11 @@
 			"Enabled": true
 		},
 		{
-			"Name": "FF_MBedTLS",
+			"Name": "JsonBlueprintUtilities",
 			"Enabled": true
 		},
 		{
-			"Name": "JsonBlueprintUtilities",
+			"Name": "FF_MQTT_Sync",
 			"Enabled": true
 		}
 	]

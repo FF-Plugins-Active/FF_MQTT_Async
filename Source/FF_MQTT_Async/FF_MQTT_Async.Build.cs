@@ -13,22 +13,12 @@ public class FF_MQTT_Async : ModuleRules
         bEnableUndefinedIdentifierWarnings = false;
         bEnableExceptions = true;
 
-        if (UnrealTargetPlatform.Win64 == Target.Platform)
-        {
-            bUseRTTI = true;
-
-			// C Library
-            PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "ThirdParty", "paho_c", "Win64", "include"));
-
-            // Asynchronous with SSL
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "ThirdParty", "paho_c", "Win64", "lib", "paho-mqtt3as-static.lib"));
-        }
-
         PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
                 "OpenSSL",
+                "FF_MQTT_Sync",
             }
 			);
 			
@@ -42,6 +32,7 @@ public class FF_MQTT_Async : ModuleRules
                 "Json",
                 "JsonUtilities",
                 "JsonBlueprintUtilities",
+                "paho_c_async",
             }
 			);
 		

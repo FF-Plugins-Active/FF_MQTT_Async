@@ -6,9 +6,10 @@
 #include "GameFramework/Actor.h"
 
 // Custom Includes.
-#include "MQTT_Async_Includes.h"
+#include "MQTT_Includes.h"
+#include "MQTT_Includes_Paho.h"
 
-#include "MQTT_Manager_Paho_Async.generated.h"
+#include "MQTT_Manager_Async.generated.h"
 
 UCLASS()
 class FF_MQTT_ASYNC_API AMQTT_Manager_Paho_Async : public AActor
@@ -20,11 +21,11 @@ private:
 	MQTTAsync Client = nullptr;
 	MQTTAsync_connectOptions Connection_Options;
 	MQTTAsync_SSLOptions SSL_Options;
-	FPahoClientParams_Async Client_Params;
+	FPahoClientParams Client_Params;
 
 #pragma region CALLBACKS
 
-	virtual bool SetSSLParams(FString In_Protocol, FPahoClientParams_Async In_Params);
+	virtual bool SetSSLParams(FString In_Protocol, FPahoClientParams In_Params);
 
 	static void OnConnect(void* CallbackContext, MQTTAsync_successData* Response);
 	static void OnConnectFailure(void* CallbackContext, MQTTAsync_failureData* Response);
@@ -67,46 +68,46 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_Delivered Delegate_Delivered;
+	FDelegate_Paho_Delivered Delegate_Delivered;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_Arrived Delegate_Arrived;
+	FDelegate_Paho_Arrived Delegate_Arrived;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_Lost Delegate_Lost;
+	FDelegate_Paho_Lost Delegate_Lost;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnConnect Delegate_OnConnect;
+	FDelegate_Paho_OnConnect Delegate_OnConnect;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnConnectFailure Delegate_OnConnectFailure;
+	FDelegate_Paho_OnConnectFailure Delegate_OnConnectFailure;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnDisconnect Delegate_OnDisconnect;
+	FDelegate_Paho_OnDisconnect Delegate_OnDisconnect;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnDisconnectFailure Delegate_OnDisconnectFailure;
+	FDelegate_Paho_OnDisconnectFailure Delegate_OnDisconnectFailure;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnSend Delegate_OnSend;
+	FDelegate_Paho_OnSend Delegate_OnSend;
 
 	UPROPERTY(BlueprintAssignable, Category = "Frozen Forest|MQTT|Client|Paho C")
-	FDelegate_Paho_Async_OnSendFailure Delegate_OnSendFailure;
+	FDelegate_Paho_OnSendFailure Delegate_OnSendFailure;
 
 	UFUNCTION(BlueprintPure, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Get Client Parameters"))
-	virtual FPahoClientParams_Async GetClientParams();
+	virtual FPahoClientParams GetClientParams();
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Destroy", ToolTip = "", KeyWords = "mqtt, async, paho, client, destroy, close, disconnect"))
 	virtual void MQTT_Async_Destroy();
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Init", ToolTip = "Don't attach publishers or subscribers immediately after this. Use some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, init, initialize, start, connect"))
-	virtual bool MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams_Async In_Params);
+	virtual bool MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams In_Params);
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Publish", ToolTip = "Don't use it immediately after \"MQTT Async Init\" give some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, publish, publisher"))
-	virtual bool MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS_Async In_QoS = EMQTTQOS_Async::QoS_0, int32 In_Retained = 0);
+	virtual bool MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS In_QoS = EMQTTQOS::QoS_0, int32 In_Retained = 0);
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Subscribe", ToolTip = "Don't use it immediately after \"MQTT Async Init\" give some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, subscribe, subscriber"))
-	virtual bool MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS = EMQTTQOS_Async::QoS_0);
+	virtual bool MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS In_QoS = EMQTTQOS::QoS_0);
 
 	UFUNCTION(BlueprintCallable, Category = "Frozen Forest|MQTT|Client|Paho C", meta = (DisplayName = "MQTT Async - Unsubscribe", ToolTip = "Don't use it immediately after \"MQTT Async Init\" give some delay or better use it after \"Delegate OnConnect\"", KeyWords = "mqtt, async, paho, client, unsubscribe, subscriber"))
 	virtual bool MQTT_Async_Unsubscribe(FJsonObjectWrapper& Out_Code, FString In_Topic);

@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MQTT_Manager_Paho_Async.h"
+#include "MQTT_Manager_Async.h"
 
 // Sets default values
 AMQTT_Manager_Paho_Async::AMQTT_Manager_Paho_Async()
@@ -28,7 +28,7 @@ void AMQTT_Manager_Paho_Async::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-FPahoClientParams_Async AMQTT_Manager_Paho_Async::GetClientParams()
+FPahoClientParams AMQTT_Manager_Paho_Async::GetClientParams()
 {
 	return this->Client_Params;
 }
@@ -46,7 +46,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 		Disconnect_Options.context = this;
 		Disconnect_Options.timeout = 10000;
 
-		if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+		if (this->Client_Params.Version == EMQTTVERSION::V_5)
 		{
 			Disconnect_Options.onSuccess5 = OnDisconnect5;
 			Disconnect_Options.onFailure5 = OnDisconnectFailure5;
@@ -74,7 +74,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 	MQTTAsync_destroy(&this->Client);
 }
 
-bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams_Async In_Params)
+bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPahoClientParams In_Params)
 {
 	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
 	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Init");
@@ -115,7 +115,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPa
 	MQTTAsync Temp_Client = nullptr;
 	int RetVal = -1;
 
-	if (In_Params.Version == EMQTTVERSION_Async::V_5)
+	if (In_Params.Version == EMQTTVERSION::V_5)
 	{
 		MQTTAsync_createOptions Create_Options = MQTTAsync_createOptions_initializer;
 		Create_Options.MQTTVersion = MQTTVERSION_5;
@@ -203,7 +203,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPa
 	return true;
 }
 
-bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS_Async In_QoS, int32 In_Retained)
+bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, FString In_Topic, FString In_Payload, EMQTTQOS In_QoS, int32 In_Retained)
 {
 	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
 	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Publish");
@@ -232,7 +232,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, 
 	MQTTAsync_responseOptions ResponseOptions = MQTTAsync_responseOptions_initializer;
 	ResponseOptions.context = this;
 	
-	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	if (this->Client_Params.Version == EMQTTVERSION::V_5)
 	{
 		ResponseOptions.onSuccess5 = OnSend5;
 		ResponseOptions.onFailure5 = OnSendFailure5;
@@ -253,7 +253,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Publish(FJsonObjectWrapper& Out_Code, 
 	return RetVal == MQTTASYNC_SUCCESS ? true : false;
 }
 
-bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS_Async In_QoS)
+bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code, FString In_Topic, EMQTTQOS In_QoS)
 {
 	Out_Code.JsonObject->SetStringField("ClassName", "AMQTT_Manager_Paho_Async");
 	Out_Code.JsonObject->SetStringField("FunctionName", "MQTT_Async_Subscribe");
@@ -276,7 +276,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Subscribe(FJsonObjectWrapper& Out_Code
 	MQTTAsync_responseOptions Response_Options = MQTTAsync_responseOptions_initializer;
 	Response_Options.context = this;
 
-	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	if (this->Client_Params.Version == EMQTTVERSION::V_5)
 	{
 		Response_Options.onSuccess5 = NULL;
 		Response_Options.onFailure5 = NULL;
@@ -320,7 +320,7 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Unsubscribe(FJsonObjectWrapper& Out_Co
 	MQTTAsync_responseOptions Response_Options = MQTTAsync_responseOptions_initializer;
 	Response_Options.context = this;
 
-	if (this->Client_Params.Version == EMQTTVERSION_Async::V_5)
+	if (this->Client_Params.Version == EMQTTVERSION::V_5)
 	{
 		Response_Options.onSuccess5 = OnUnSubscribe5;
 		Response_Options.onFailure5 = OnUnSubscribeFailure5;

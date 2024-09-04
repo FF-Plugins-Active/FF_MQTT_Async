@@ -1,6 +1,6 @@
-#include "MQTT_Manager_Paho_Async.h"
+#include "MQTT_Manager_Async.h"
 
-bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoClientParams_Async In_Params)
+bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoClientParams In_Params)
 {
 	if (In_Protocol.IsEmpty())
 	{
@@ -88,7 +88,7 @@ int AMQTT_Manager_Paho_Async::MessageArrived(void* CallbackContext, char* TopicN
 		return 0;
 	}
 
-	FPahoArrived_Async StrArrived;
+	FPahoArrived StrArrived;
 	StrArrived.TopicName = UTF8_TO_TCHAR(TopicName);
 	StrArrived.TopicLenght = TopicLenght;
 	StrArrived.Message.AppendChars(UTF8_TO_TCHAR((char*)Message->payload), Message->payloadlen);
