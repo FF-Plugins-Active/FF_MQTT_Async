@@ -4,5 +4,8 @@ This is an Eclipse Paho C library based Async MQTT client (subscriber and publis
 ## THIRD PARTY LIBRARY
 https://github.com/eclipse/paho.mqtt.c
 
+## DEPENDENCY
+https://github.com/FF-Plugins-Active/FF_MQTT_Sync
+
 ## ROADMAP
 * Android Platform support
