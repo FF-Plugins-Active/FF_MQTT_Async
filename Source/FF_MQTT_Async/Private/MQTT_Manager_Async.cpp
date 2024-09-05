@@ -61,7 +61,7 @@ void AMQTT_Manager_Paho_Async::MQTT_Async_Destroy()
 
 		try
 		{
-			MQTTAsync_disconnect(&this->Client, &Disconnect_Options);
+			MQTTAsync_disconnect(this->Client, &Disconnect_Options);
 		}
 
 		catch (const std::exception& Exception)
