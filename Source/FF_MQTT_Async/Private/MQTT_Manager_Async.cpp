@@ -18,7 +18,7 @@ void AMQTT_Manager_Paho_Async::BeginPlay()
 // Called when the game end or when destroyed.
 void AMQTT_Manager_Paho_Async::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	//this->MQTT_Async_Destroy();
+	this->MQTT_Async_Destroy();
 	Super::EndPlay(EndPlayReason);
 }
 
