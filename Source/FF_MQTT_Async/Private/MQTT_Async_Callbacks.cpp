@@ -1,61 +1,42 @@
 #include "MQTT_Manager_Async.h"
 
-bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoClientParams In_Params)
+bool AMQTT_Manager_Paho_Async::SetSSLParams(FString In_Protocol, FPahoSslOptions In_Options)
 {
-	if (In_Protocol.IsEmpty())
-	{
-		return false;
-	}
-
 	if (In_Protocol == "wss" || In_Protocol == "mqtts" || In_Protocol == "ssl" || In_Protocol == "WSS" || In_Protocol == "MQTTS" || In_Protocol == "SSL")
 	{
 		this->SSL_Options = MQTTAsync_SSLOptions_initializer;
 		this->SSL_Options.enableServerCertAuth = 0;
 		this->SSL_Options.verify = 1;
 
-		if (!In_Params.CAPath.IsEmpty() && FPaths::FileExists(In_Params.CAPath))
+		if (!In_Options.CAPath.IsEmpty() && FPaths::FileExists(In_Options.CAPath))
 		{
-			this->SSL_Options.CApath = TCHAR_TO_UTF8(*In_Params.CAPath);
+			this->SSL_Options.CApath = TCHAR_TO_UTF8(*In_Options.CAPath);
 		}
 
-		else
+		if (!In_Options.Path_KeyStore.IsEmpty() && FPaths::FileExists(In_Options.Path_KeyStore))
 		{
-			this->SSL_Options.CApath = NULL;
+			this->SSL_Options.keyStore = TCHAR_TO_UTF8(*In_Options.Path_KeyStore);
 		}
 
-		if (!In_Params.Path_KeyStore.IsEmpty() && FPaths::FileExists(In_Params.Path_KeyStore))
+		if (!In_Options.Path_TrustStore.IsEmpty() && FPaths::FileExists(In_Options.Path_TrustStore))
 		{
-			this->SSL_Options.keyStore = TCHAR_TO_UTF8(*In_Params.Path_KeyStore);
+			this->SSL_Options.trustStore = TCHAR_TO_UTF8(*In_Options.Path_TrustStore);
 		}
 
-		else
+		if (!In_Options.Path_PrivateKey.IsEmpty() && FPaths::FileExists(In_Options.Path_PrivateKey))
 		{
-			this->SSL_Options.keyStore = NULL;
+			this->SSL_Options.privateKey = TCHAR_TO_UTF8(*In_Options.Path_PrivateKey);
 		}
 
-		if (!In_Params.Path_TrustStore.IsEmpty() && FPaths::FileExists(In_Params.Path_TrustStore))
+		if (!In_Options.PrivateKeyPass.IsEmpty())
 		{
-			this->SSL_Options.trustStore = TCHAR_TO_UTF8(*In_Params.Path_TrustStore);
+			this->SSL_Options.privateKeyPassword = TCHAR_TO_UTF8(*In_Options.PrivateKeyPass);
 		}
 
-		else
+		if (!In_Options.CipherSuites.IsEmpty())
 		{
-			this->SSL_Options.trustStore = NULL;
+			this->SSL_Options.enabledCipherSuites = TCHAR_TO_UTF8(*In_Options.CipherSuites);
 		}
-
-		if (!In_Params.Path_PrivateKey.IsEmpty() && FPaths::FileExists(In_Params.Path_PrivateKey))
-		{
-
-			this->SSL_Options.privateKey = TCHAR_TO_UTF8(*In_Params.Path_PrivateKey);
-		}
-
-		else
-		{
-			this->SSL_Options.privateKey = NULL;
-		}
-
-		this->SSL_Options.privateKeyPassword = In_Params.PrivateKeyPass.IsEmpty() ? NULL : TCHAR_TO_UTF8(*In_Params.PrivateKeyPass);
-		this->SSL_Options.enabledCipherSuites = In_Params.CipherSuites.IsEmpty() ? NULL : TCHAR_TO_UTF8(*In_Params.CipherSuites);
 
 		return true;
 	}

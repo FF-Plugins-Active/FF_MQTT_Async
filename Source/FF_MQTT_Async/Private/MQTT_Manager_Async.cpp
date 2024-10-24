@@ -100,20 +100,10 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPa
 		return false;
 	}
 
-	FString Protocol = In_Params.GetProtocol();
-	
-	if (this->SetSSLParams(Protocol, In_Params))
-	{
-		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters set.");
-	}
-
-	else
-	{
-		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters couldn't set.");
-	}
-
 	MQTTAsync Temp_Client = nullptr;
 	int RetVal = -1;
+
+	FString Protocol = In_Params.GetProtocol();
 
 	if (In_Params.Version == EMQTTVERSION::V_5)
 	{
@@ -156,12 +146,22 @@ bool AMQTT_Manager_Paho_Async::MQTT_Async_Init(FJsonObjectWrapper& Out_Code, FPa
 		this->Connection_Options.onFailure = OnConnectFailure;
 	}
 
+	this->Connection_Options.context = this;
 	this->Connection_Options.keepAliveInterval = In_Params.KeepAliveInterval;
 	this->Connection_Options.username = TCHAR_TO_UTF8(*In_Params.UserName);
 	this->Connection_Options.password = TCHAR_TO_UTF8(*In_Params.Password);
 	this->Connection_Options.MQTTVersion = (int32)In_Params.Version;
-	this->Connection_Options.ssl = &this->SSL_Options;
-	this->Connection_Options.context = this;
+	
+	if (this->SetSSLParams(Protocol, In_Params.SSL_Options))
+	{
+		this->Connection_Options.ssl = &this->SSL_Options;
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters set.");
+	}
+
+	else
+	{
+		Out_Code.JsonObject->SetStringField("AdditionalInfo", "SSL parameters couldn't set.");
+	}	
 
 	if (RetVal != MQTTASYNC_SUCCESS)
 	{

@@ -7,7 +7,7 @@
 
 // Custom Includes.
 #include "MQTT_Includes.h"
-#include "MQTT_Includes_Paho.h"
+#include "Paho_Async_Includes.h"
 
 #include "MQTT_Manager_Async.generated.h"
 
@@ -25,7 +25,7 @@ private:
 
 #pragma region CALLBACKS
 
-	virtual bool SetSSLParams(FString In_Protocol, FPahoClientParams In_Params);
+	virtual bool SetSSLParams(FString In_Protocol, FPahoSslOptions In_Options);
 
 	static void OnConnect(void* CallbackContext, MQTTAsync_successData* Response);
 	static void OnConnectFailure(void* CallbackContext, MQTTAsync_failureData* Response);
