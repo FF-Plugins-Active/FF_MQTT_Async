@@ -7,7 +7,7 @@ namespace UnrealBuildTool.Rules
         public paho_c_async(ReadOnlyTargetRules Target) : base(Target)
         {
     		Type = ModuleType.External;
-            bEnableUndefinedIdentifierWarnings = false;
+            UndefinedIdentifierWarningLevel = WarningLevel.Off;
             bEnableExceptions = true;
 
             if (Target.Platform == UnrealTargetPlatform.Win64)
